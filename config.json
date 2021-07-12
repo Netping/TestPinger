@@ -1,0 +1,20 @@
+[
+    {
+        "protocol": "PING",
+        "polls_cnt": "2",
+        "polls": [
+            {
+                "pollID": "ping1",
+                "pollURL": "localhost",
+                "period": "0.5",
+                "size": "40"
+            },
+            {
+                "pollID": "ping2",
+                "pollURL": "localhost",
+                "period": "5",
+                "size": "16"
+            }
+       ]
+   }
+]
