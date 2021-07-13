@@ -2,11 +2,7 @@
 
 from os import path
 import json
-import threading
-import logging
-from datetime import datetime
-import time
-from pythonping import ping
+from protocol import *
 
 def create_conf_example():
     confdata = '[\n'
@@ -27,47 +23,30 @@ def create_conf_example():
     confdata += '                "size": "10"\n'
     confdata += '            }\n'
     confdata += '       ]\n'
-    confdata += '   }\n'
+    confdata += '    },\n'
+    confdata += '    {\n'
+    confdata += '        "protocol": "SNMP",\n'
+    confdata += '        "polls_cnt": "2",\n'
+    confdata += '        "polls": [\n'
+    confdata += '            {\n'
+    confdata += '                "pollID": "snmp1",\n'
+    confdata += '                "pollURL": "localhost",\n'
+    confdata += '                "OID": "1.3.6.1.2.1.17.7.1.2.2.1.2"\n'
+    confdata += '                "period": "2",\n'
+    confdata += '            },\n'
+    confdata += '            {\n'
+    confdata += '                "pollID": "ping2",\n'
+    confdata += '                "pollURL": "localhost",\n'
+    confdata += '                "OID": "1.3.6.1.4.1.9.2.1.61.0"\n'
+    confdata += '                "period": "5",\n'
+    confdata += '            }\n'
+    confdata += '       ]\n'
+    confdata += '    },\n'
     confdata += ']'
     with open('config.json', 'w') as config:
         config.write(confdata)
         print('Сonfig file created (config.json)')
         print('You should edit the config file')
-
-class PingThread(threading.Thread):
-    def __init__(self, pollID, pollURL, period, size):
-        threading.Thread.__init__(self)
-        self.ID = pollID
-        self.url = pollURL
-        self.period = float(period)
-        self.size = int(size)
-        self._stoped = False
-
-    def stop(self):
-        self._stoped = True
-
-    def run(self):
-        num = 0
-        while not self._stoped:
-            num += 1
-            logging.info(
-                '%s START %s num=%s (url=%s, period=%s, size=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                                                                     self.ID, num, self.url, self.period,
-                                                                     self.size))
-            try:
-                response_list = ping(self.url, size=self.size, count=1)
-                logging.info(
-                    '%s  STOP %s num=%s (url=%s, period=%s, size=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                                                                                   self.ID, num, self.url, self.period,
-                                                                                   self.size, response_list._responses))
-                time.sleep(self.period)
-            except (OSError, RuntimeError) as e:
-                print("STOP {0} WITH ERROR: {1}".format(self.ID, e))
-                logging.error(
-                    '%s  STOP %s num=%s (url=%s, period=%s, size=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                                                                                   self.ID, num, self.url, self.period,
-                                                                                   self.size, "ERROR: {0}".format(e)))
-                break
 
 def main():
     try:
@@ -82,16 +61,29 @@ def main():
         with open('./config.json') as config:
             confdata = json.load(config)
         # polling
+        pingthreads = []
+        snmpthreads = []
         for protocol in confdata:
-            threads = []
-            for poll in protocol['polls']:
-                pingthread = PingThread(poll['pollID'], poll['pollURL'], poll['period'], poll['size'])
-                pingthread.start()
-                threads.append(pingthread)
-            for thread in threads:
-                thread.join()
+            if protocol['protocol'] == 'PING':
+                for poll in protocol['polls']:
+                    pingthread = PingThread(poll['pollID'], poll['pollURL'], poll['size'], poll['period'])
+                    pingthread.start()
+                    pingthreads.append(pingthread)
+            elif protocol['protocol'] == 'SNMP':
+                for poll in protocol['polls']:
+                    snmpthread = SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'], poll['period'])
+                    snmpthread.start()
+                    snmpthreads.append(snmpthread)
+            else:
+                pass
+        for thread in pingthreads:
+            thread.join()
+        for thread in snmpthreads:
+            thread.join()
     except KeyboardInterrupt:
-        for thread in threads:
+        for thread in pingthreads:
+            thread.stop()
+        for thread in snmpthreads:
             thread.stop()
         print("\nwait...")
 
