@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 import time
 from pythonping import ping
-from pysnmp.hlapi import *
+from pysnmp.entity.rfc3413.oneliner import cmdgen
 
 class PingThread(threading.Thread):
     def __init__(self, pollID, pollURL, size, period):
@@ -46,7 +46,7 @@ class SNMPThread(threading.Thread):
     def __init__(self, pollID, pollURL, OID, period):
         threading.Thread.__init__(self)
         self.ID = pollID
-        self.url = pollURL
+        self.url = pollURL.split(':')
         self.period = float(period)
         self.OID = OID
         self._stoped = False
@@ -63,13 +63,12 @@ class SNMPThread(threading.Thread):
                                                                      self.ID, num, self.url, self.period,
                                                                      self.OID))
             try:
-                iterator = getCmd(
-                    SnmpEngine(),
-                    CommunityData('public'),
-                    UdpTransportTarget((self.url, 161)),
-                    (self.OID, None)
+                snmpget = cmdgen.CommandGenerator()
+                errorIndication, errorStatus, errorIndex, varBinds = snmpget.getCmd(
+                    cmdgen.CommunityData('public', mpModel=0),
+                    cmdgen.UdpTransportTarget((self.url[0], self.url[1])),
+                    self.OID
                 )
-                errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
                 if errorIndication:
                     print("STOP {0} WITH ERROR: {1}".format(self.ID, errorIndication))
                     logging.error(
