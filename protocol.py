@@ -65,8 +65,8 @@ class SNMPThread(threading.Thread):
             try:
                 snmpget = cmdgen.CommandGenerator()
                 errorIndication, errorStatus, errorIndex, varBinds = snmpget.getCmd(
-                    cmdgen.CommunityData('public', mpModel=0),
-                    cmdgen.UdpTransportTarget((self.url[0], self.url[1])),
+                    cmdgen.CommunityData('ping31', mpModel=0),
+                    cmdgen.UdpTransportTarget((self.url[0], int(self.url[1]))),
                     self.OID
                 )
                 if errorIndication:
@@ -89,7 +89,7 @@ class SNMPThread(threading.Thread):
                 else:
                     result = ''
                     for varBind in varBinds:
-                        result.join([x.prettyPrint() for x in varBind])
+                        result += str(varBind)
                     logging.info(
                         '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                                                                                       self.ID, num, self.url, self.period,
