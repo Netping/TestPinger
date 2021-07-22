@@ -1,91 +1,93 @@
 #!/usr/bin/python3
 
 from os import path
-import json
 from protocol import *
+from configchange import *
 
-def create_conf_example():
-    confdata = '[\n'
-    confdata += '    {\n'
-    confdata += '        "protocol": "PING",\n'
-    confdata += '        "polls_cnt": "2",\n'
-    confdata += '        "polls": [\n'
-    confdata += '            {\n'
-    confdata += '                "pollID": "ping1",\n'
-    confdata += '                "pollURL": "localhost",\n'
-    confdata += '                "period": "0.5",\n'
-    confdata += '                "size": "10"\n'
-    confdata += '            },\n'
-    confdata += '            {\n'
-    confdata += '                "pollID": "ping2",\n'
-    confdata += '                "pollURL": "localhost",\n'
-    confdata += '                "period": "5",\n'
-    confdata += '                "size": "10"\n'
-    confdata += '            }\n'
-    confdata += '       ]\n'
-    confdata += '    },\n'
-    confdata += '    {\n'
-    confdata += '        "protocol": "SNMP",\n'
-    confdata += '        "polls_cnt": "2",\n'
-    confdata += '        "polls": [\n'
-    confdata += '            {\n'
-    confdata += '                "pollID": "snmp1",\n'
-    confdata += '                "pollURL": "125.227.188.172:31161",\n'
-    confdata += '                "OID": ".1.3.6.1.2.1.1.1.0"\n'
-    confdata += '                "period": "2",\n'
-    confdata += '            },\n'
-    confdata += '            {\n'
-    confdata += '                "pollID": "ping2",\n'
-    confdata += '                "pollURL": "125.227.188.172:31161",\n'
-    confdata += '                "OID": ".1.3.6.1.2.1.1.3.0"\n'
-    confdata += '                "period": "5",\n'
-    confdata += '            }\n'
-    confdata += '       ]\n'
-    confdata += '    },\n'
-    confdata += ']'
-    with open('config.json', 'w') as config:
-        config.write(confdata)
-        print('Сonfig file created (config.json)')
-        print('You should edit the config file')
+# parse config file
+def parseconfig(file, start):
+    if not start:
+        confdata.clear()
+    conf = open(file, 'r')
+    strconf = conf.read()
+    configs = strconf.split('config ')
+    poll_ids = []
+    for config in configs[1:]:
+        parse_error = False
+        confdict = {}
+        poll = config.split('\n')
+        confdict['protocol'] = file[:4]
+        if poll[0] not in poll_ids:
+            confdict['pollID'] = poll[0]
+            for option in poll[1:]:
+                opt = option.strip().split(' ')
+                if len(opt) == 3:
+                    confdict[opt[1]] = opt[2]
+                elif len(opt) == 1 and opt[0] == '':
+                    continue
+                else:
+                    print("CONFIG ERROR {0}: check config file in {1} with row: {2}".format(file, poll[0], option))
+                    parse_error = True
+        if not parse_error:
+            poll_ids.append(poll[0])
+            confdata.append(confdict)
+    conf.close()
 
 def main():
     try:
-        # create config file if it doesn’t exist
-        if not path.exists('./config.json'):
-            create_conf_example()
-            return
+        # run config notifier
+        wm = pyinotify.WatchManager()
+        eh = ConfigChange()
+        notifier = pyinotify.ThreadedNotifier(wm, eh)
+        for file in conf_files.values():
+            wm.add_watch(file, pyinotify.IN_MODIFY)
+        notifier.start()
         print('PRESS "CTRL + C" TO QUIT')
         # create and initialize log file
         logging.basicConfig(filename='log.txt', level=logging.INFO)
-        # read existing config file
-        with open('./config.json') as config:
-            confdata = json.load(config)
+
+        # read existing config files
+        global confdata
+        confdata = []
+        for file in conf_files.values():
+            if path.exists(file):
+                parseconfig(file, True)
         # polling
-        pingthreads = []
-        snmpthreads = []
-        for protocol in confdata:
-            if protocol['protocol'] == 'PING':
-                for poll in protocol['polls']:
-                    pingthread = PingThread(poll['pollID'], poll['pollURL'], poll['size'], poll['period'])
-                    pingthread.start()
-                    pingthreads.append(pingthread)
-            elif protocol['protocol'] == 'SNMP':
-                for poll in protocol['polls']:
-                    snmpthread = SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'], poll['period'])
-                    snmpthread.start()
-                    snmpthreads.append(snmpthread)
+        global pingthreads
+        global snmpthreads
+        for poll in confdata:
+            if poll['protocol'] == 'ping':
+                pingthread = PingThread(poll['pollID'], poll['pollURL'], poll['size'], poll['period'])
+                pingthread.start()
+                pingthreads.append({poll['pollID']: pingthread})
+            elif poll['protocol'] == 'snmp':
+                snmpthread = SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'],
+                                        poll['period'], poll['community'])
+                snmpthread.start()
+                snmpthreads.append({poll['pollID']: snmpthread})
             else:
                 pass
-        for thread in pingthreads:
-            thread.join()
-        for thread in snmpthreads:
-            thread.join()
+        reparseconfig = ReParseConfig()
+        reparseconfig.start()
+        # for thread in pingthreads:
+        #     for th in thread.values():
+        #         th.join()
+        # for thread in snmpthreads:
+        #     for th in thread.values():
+        #         thread.join()
+        # reparseconfig.join()
+        notifier.join()
     except KeyboardInterrupt:
-        for thread in pingthreads:
-            thread.stop()
-        for thread in snmpthreads:
-            thread.stop()
         print("\nwait...")
+        for thread in pingthreads:
+            for th in thread.values():
+                th.stop()
+        for thread in snmpthreads:
+            for th in thread.values():
+                th.stop()
+        reparseconfig.stop()
+        notifier.stop()
+
 
 if __name__ == "__main__":
     main()

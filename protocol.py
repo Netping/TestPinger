@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 from pythonping import ping
 from pysnmp.entity.rfc3413.oneliner import cmdgen
+from testpinger import *
 
 class PingThread(threading.Thread):
     def __init__(self, pollID, pollURL, size, period):
@@ -18,6 +19,12 @@ class PingThread(threading.Thread):
 
     def stop(self):
         self._stoped = True
+
+    def checkthread(self, pollURL, size, period):
+        if pollURL == self.url and int(size) == self.size and float(period) == self.period:
+            return True
+        else:
+            return False
 
     def run(self):
         num = 0
@@ -43,12 +50,13 @@ class PingThread(threading.Thread):
                 break
 
 class SNMPThread(threading.Thread):
-    def __init__(self, pollID, pollURL, OID, period):
+    def __init__(self, pollID, pollURL, OID, period, community):
         threading.Thread.__init__(self)
         self.ID = pollID
         self.url = pollURL.split(':')
         self.period = float(period)
         self.OID = OID
+        self.community = community
         self._stoped = False
 
     def stop(self):
@@ -65,7 +73,7 @@ class SNMPThread(threading.Thread):
             try:
                 snmpget = cmdgen.CommandGenerator()
                 errorIndication, errorStatus, errorIndex, varBinds = snmpget.getCmd(
-                    cmdgen.CommunityData('ping31', mpModel=0),
+                    cmdgen.CommunityData(self.community, mpModel=0),
                     cmdgen.UdpTransportTarget((self.url[0], int(self.url[1]))),
                     self.OID
                 )

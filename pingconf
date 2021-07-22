@@ -1,0 +1,14 @@
+config ping11
+    option size 40
+    option pollURL localhost
+    option period 3
+
+config ping22
+    option size 40
+    option pollURL localhost
+    option period 3
+
+config ping33
+    option size 40
+    option pollURL localhost
+    option period 3

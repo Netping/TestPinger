@@ -1,0 +1,11 @@
+config snmp11
+    option pollURL localhost:161
+    option OID .1.3.6.1.2.1.1.1.0
+    option period 2
+    option community ping31
+
+config snmp2
+    option OID .1.3.6.1.2.1.1.3.0
+    option pollURL localhost:31161
+    option community ping31
+    option period 5
