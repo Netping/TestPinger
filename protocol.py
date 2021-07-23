@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import threading
-import logging
 from datetime import datetime
 import time
 from pythonping import ping
@@ -62,6 +61,12 @@ class SNMPThread(threading.Thread):
     def stop(self):
         self._stoped = True
 
+    def checkthread(self, pollURL, OID, period, community):
+        if pollURL == self.url and OID == self.OID and float(period) == self.period and community == self.community:
+            return True
+        else:
+            return False
+
     def run(self):
         num = 0
         while not self._stoped:
@@ -78,22 +83,22 @@ class SNMPThread(threading.Thread):
                     self.OID
                 )
                 if errorIndication:
-                    print("STOP {0} WITH ERROR: {1}".format(self.ID, errorIndication))
-                    logging.error(
+                    # print("STOP {0} WITH ERROR: {1}".format(self.ID, errorIndication))
+                    logging.info(
                         '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (
                         datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                         self.ID, num, self.url, self.period,
-                        self.OID, "ERROR: {0}".format(errorIndication)))
-                    break
+                        self.OID, errorIndication))
+                    # break
                 elif errorStatus:
-                    print("STOP {0} with {1} at {2}".format(self.ID, errorStatus.prettyPrint(),
-                                                            errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
-                    logging.error(
+                    # print("STOP {0} with {1} at {2}".format(self.ID, errorStatus.prettyPrint(),
+                    #                                         errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
+                    logging.info(
                         '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (
                             datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                             self.ID, num, self.url, self.period,
                             self.OID, errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
-                    break
+                    # break
                 else:
                     result = ''
                     for varBind in varBinds:

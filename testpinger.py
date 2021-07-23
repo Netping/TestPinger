@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import logging
 from os import path
 from protocol import *
 from configchange import *
@@ -42,9 +43,10 @@ def main():
         for file in conf_files.values():
             wm.add_watch(file, pyinotify.IN_MODIFY)
         notifier.start()
+        print('TestPinger (version 0.3)')
         print('PRESS "CTRL + C" TO QUIT')
         # create and initialize log file
-        logging.basicConfig(filename='log.txt', level=logging.INFO)
+        logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(message)s')
 
         # read existing config files
         global confdata
