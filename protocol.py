@@ -49,20 +49,22 @@ class PingThread(threading.Thread):
                 break
 
 class SNMPThread(threading.Thread):
-    def __init__(self, pollID, pollURL, OID, period, community):
+    def __init__(self, pollID, pollURL, OID, period, community, timeout):
         threading.Thread.__init__(self)
         self.ID = pollID
         self.url = pollURL.split(':')
         self.period = float(period)
         self.OID = OID
         self.community = community
+        self.timeout = float(timeout)
         self._stoped = False
 
     def stop(self):
         self._stoped = True
 
-    def checkthread(self, pollURL, OID, period, community):
-        if pollURL == self.url and OID == self.OID and float(period) == self.period and community == self.community:
+    def checkthread(self, pollURL, OID, period, community, timeout):
+        if pollURL == self.url and OID == self.OID and float(period) == self.period and \
+                community == self.community and timeout == self.timeout:
             return True
         else:
             return False
@@ -72,46 +74,48 @@ class SNMPThread(threading.Thread):
         while not self._stoped:
             num += 1
             logging.info(
-                '%s START %s num=%s (url=%s, period=%s, OID=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                '%s START %s num=%s (url=%s, period=%s, OID=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                                                                      self.ID, num, self.url, self.period,
-                                                                     self.OID))
+                                                                     self.OID, self.timeout))
             try:
                 snmpget = cmdgen.CommandGenerator()
                 errorIndication, errorStatus, errorIndex, varBinds = snmpget.getCmd(
                     cmdgen.CommunityData(self.community, mpModel=0),
-                    cmdgen.UdpTransportTarget((self.url[0], int(self.url[1]))),
+                    cmdgen.UdpTransportTarget((self.url[0], int(self.url[1])), timeout=self.timeout, retries=0),
                     self.OID
                 )
                 if errorIndication:
                     # print("STOP {0} WITH ERROR: {1}".format(self.ID, errorIndication))
                     logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (
+                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (
                         datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                         self.ID, num, self.url, self.period,
-                        self.OID, errorIndication))
+                        self.OID, self.timeout, errorIndication))
                     # break
                 elif errorStatus:
                     # print("STOP {0} with {1} at {2}".format(self.ID, errorStatus.prettyPrint(),
                     #                                         errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
                     logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (
+                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (
                             datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                             self.ID, num, self.url, self.period,
-                            self.OID, errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
+                            self.OID, self.timeout, errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
                     # break
                 else:
                     result = ''
                     for varBind in varBinds:
                         result += str(varBind)
                     logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                                                                                      self.ID, num, self.url, self.period,
-                                                                                      self.OID, result))
+                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                                  self.ID, num, self.url,
+                                                                                                  self.period, self.OID,
+                                                                                                  self.timeout, result))
                 time.sleep(self.period)
             except (OSError, RuntimeError) as e:
                 print("STOP {0} WITH ERROR: {1}".format(self.ID, e))
                 logging.error(
-                    '%s  STOP %s num=%s (url=%s, period=%s, OID=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                                                                                   self.ID, num, self.url, self.period,
-                                                                                   self.OID, "ERROR: {0}".format(e)))
+                    '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                              self.ID, num, self.url,
+                                                                                              self.period, self.OID,
+                                                                                              self.timeout, "ERROR: {0}".format(e)))
                 break

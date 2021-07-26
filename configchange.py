@@ -77,14 +77,15 @@ class ReParseConfig(threading.Thread):
                             snmpthreads[thind][thkey].stop()
                             snmpthreads.pop(thind)
                         else:
-                            equal = thval.checkthread(th['pollURL'], th['OID'], th['period'], th['community'])
+                            equal = thval.checkthread(th['pollURL'], th['OID'], th['period'], th['community'],
+                                                      th['timeout'])
                             if equal:
                                 continue
                             else:
                                 snmpthreads[thind][thkey].stop()
                                 snmpthreads.pop(thind)
                                 snmpthread = protocol.SNMPThread(th['pollID'], th['pollURL'], th['OID'], th['period'],
-                                                                 th['community'])
+                                                                 th['community'], th['timeout'])
                                 snmpthread.start()
                                 tempsnmpthreads.append({th['pollID']: snmpthread})
                     snmpthreads += tempsnmpthreads
@@ -93,7 +94,7 @@ class ReParseConfig(threading.Thread):
                         notnewpoll = next((item for item in snmpthreads if poll['pollID'] in item.keys()), False)
                         if not notnewpoll:
                             snmpthread = protocol.SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'],
-                                                             poll['period'], poll['community'])
+                                                             poll['period'], poll['community'], poll['timeout'])
                             snmpthread.start()
                             snmpthreads.append({poll['pollID']: snmpthread})
                 confchange = False

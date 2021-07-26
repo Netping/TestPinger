@@ -64,7 +64,7 @@ def main():
                 pingthreads.append({poll['pollID']: pingthread})
             elif poll['protocol'] == 'snmp':
                 snmpthread = SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'],
-                                        poll['period'], poll['community'])
+                                        poll['period'], poll['community'], poll['timeout'])
                 snmpthread.start()
                 snmpthreads.append({poll['pollID']: snmpthread})
             else:
