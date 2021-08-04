@@ -4,46 +4,29 @@ import logging
 from os import path
 from protocol import *
 from configchange import *
+import sys
 
 # parse config file
 def parseconfig(file, start):
     if not start:
         confdata.clear()
-    conf = open(file, 'r')
-    strconf = conf.read()
-    configs = strconf.split('config ')
+    try:
+        ubus.connect()
+    except:
+        pass
+    confvalues = ubus.call("uci", "get", {"config": file})
     poll_ids = []
-    for config in configs[1:]:
-        parse_error = False
-        confdict = {}
-        poll = config.split('\n')
-        confdict['protocol'] = file[:4]
-        if poll[0] not in poll_ids:
-            confdict['pollID'] = poll[0]
-            for option in poll[1:]:
-                opt = option.strip().split(' ')
-                if len(opt) == 3:
-                    confdict[opt[1]] = opt[2]
-                elif len(opt) == 1 and opt[0] == '':
-                    continue
-                else:
-                    print("CONFIG ERROR {0}: check config file in {1} with row: {2}".format(file, poll[0], option))
-                    parse_error = True
-        if not parse_error:
-            poll_ids.append(poll[0])
+    for confdict in list(confvalues[0]['values'].values()):
+        if confdict['.name'] not in poll_ids:
+            confdict['protocol'] = file[:4]
             confdata.append(confdict)
-    conf.close()
+            poll_ids.append(confdict['.name'])
+    # ubus.disconnect()
+
 
 def main():
     try:
-        # run config notifier
-        wm = pyinotify.WatchManager()
-        eh = ConfigChange()
-        notifier = pyinotify.ThreadedNotifier(wm, eh)
-        for file in conf_files.values():
-            wm.add_watch(file, pyinotify.IN_MODIFY)
-        notifier.start()
-        print('TestPinger (version 0.3)')
+        print('TestPinger (version 0.4)')
         print('PRESS "CTRL + C" TO QUIT')
         # create and initialize log file
         logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(message)s')
@@ -59,17 +42,18 @@ def main():
         global snmpthreads
         for poll in confdata:
             if poll['protocol'] == 'ping':
-                pingthread = PingThread(poll['pollID'], poll['pollURL'], poll['size'], poll['period'])
+                pingthread = PingThread(poll['.name'], poll['pollURL'], poll['size'], poll['period'])
                 pingthread.start()
-                pingthreads.append({poll['pollID']: pingthread})
+                pingthreads.append({poll['.name']: pingthread})
             elif poll['protocol'] == 'snmp':
-                snmpthread = SNMPThread(poll['pollID'], poll['pollURL'], poll['OID'],
+                snmpthread = SNMPThread(poll['.name'], poll['pollURL'], poll['OID'],
                                         poll['period'], poll['community'], poll['timeout'])
                 snmpthread.start()
-                snmpthreads.append({poll['pollID']: snmpthread})
+                snmpthreads.append({poll['.name']: snmpthread})
             else:
                 pass
         reparseconfig = ReParseConfig()
+        reparseconfig.daemon = True
         reparseconfig.start()
         # for thread in pingthreads:
         #     for th in thread.values():
@@ -77,8 +61,7 @@ def main():
         # for thread in snmpthreads:
         #     for th in thread.values():
         #         thread.join()
-        # reparseconfig.join()
-        notifier.join()
+        #reparseconfig.join()
     except KeyboardInterrupt:
         print("\nwait...")
         for thread in pingthreads:
@@ -87,8 +70,6 @@ def main():
         for thread in snmpthreads:
             for th in thread.values():
                 th.stop()
-        reparseconfig.stop()
-        notifier.stop()
 
 
 if __name__ == "__main__":
