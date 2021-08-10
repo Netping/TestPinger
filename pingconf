@@ -1,11 +1,11 @@
 
 config section 'ping11'
 	option pollURL 'localhost'
-	option period '3'
+	option period '10'
 	option size '70'
 
 config section 'ping33'
 	option pollURL 'localhost'
-	option period '3'
+	option period '10'
 	option size '30'
 

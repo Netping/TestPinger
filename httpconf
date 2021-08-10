@@ -1,0 +1,10 @@
+config section 'http1'
+        option pollURL 'http://192.168.1.55'
+        option period '3'
+        option timeout '5'
+
+config section 'http2'
+        option pollURL 'http://localhost'
+        option period '0.1'
+        option timeout '5'
+

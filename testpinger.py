@@ -40,6 +40,7 @@ def main():
         # polling
         global pingthreads
         global snmpthreads
+        global httpthreads
         for poll in confdata:
             if poll['protocol'] == 'ping':
                 pingthread = PingThread(poll['.name'], poll['pollURL'], poll['size'], poll['period'])
@@ -50,6 +51,10 @@ def main():
                                         poll['period'], poll['community'], poll['timeout'])
                 snmpthread.start()
                 snmpthreads.append({poll['.name']: snmpthread})
+            elif poll['protocol'] == 'http':
+                httpthread = HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'])
+                httpthread.start()
+                httpthreads.append({poll['.name']: httpthread})
             else:
                 pass
         reparseconfig = ReParseConfig()
@@ -68,6 +73,9 @@ def main():
             for th in thread.values():
                 th.stop()
         for thread in snmpthreads:
+            for th in thread.values():
+                th.stop()
+        for thread in httpthreads:
             for th in thread.values():
                 th.stop()
 

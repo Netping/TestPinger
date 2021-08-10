@@ -5,6 +5,7 @@ from datetime import datetime
 import time
 from pythonping import ping
 from pysnmp.entity.rfc3413.oneliner import cmdgen
+import requests
 from testpinger import *
 
 class PingThread(threading.Thread):
@@ -118,4 +119,56 @@ class SNMPThread(threading.Thread):
                                                                                               self.ID, num, self.url,
                                                                                               self.period, self.OID,
                                                                                               self.timeout, "ERROR: {0}".format(e)))
+                break
+
+class HttpThread(threading.Thread):
+    def __init__(self, pollID, pollURL, period, timeout):
+        threading.Thread.__init__(self)
+        self.ID = pollID
+        self.url = pollURL
+        self.period = float(period)
+        self.timeout = float(timeout)
+        self._stoped = False
+
+    def stop(self):
+        self._stoped = True
+
+    def checkthread(self, pollURL, period, timeout):
+        if pollURL == self.url and float(period) == self.period and float(timeout) == self.timeout:
+            return True
+        else:
+            return False
+
+    def run(self):
+        num = 0
+        while not self._stoped:
+            num += 1
+            logging.info(
+                '%s START %s num=%s (url=%s, period=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                     self.ID, num, self.url, self.period,
+                                                                     self.timeout))
+            try:
+                response = requests.get(self.url, timeout=self.timeout)
+                logging.info(
+                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                   self.ID, num, self.url, self.period,
+                                                                                   self.timeout, response.status_code))
+                time.sleep(self.period)
+            except requests.exceptions.ConnectTimeout:
+                logging.info(
+                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                   self.ID, num, self.url, self.period,
+                                                                                   self.timeout, 'Connection timeout'))
+            except requests.exceptions.ConnectionError:
+                logging.info(
+                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                   self.ID, num, self.url, self.period,
+                                                                                   self.timeout, 'Host is unreachable'))
+                time.sleep(self.period)
+            except (OSError, RuntimeError) as e:
+                print("STOP {0} WITH ERROR: {1}".format(self.ID, e))
+                logging.error(
+                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                                                                                   self.ID, num, self.url, self.period,
+                                                                                   self.timeout, "ERROR: {0}".format(e)))
                 break

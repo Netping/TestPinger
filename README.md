@@ -5,10 +5,11 @@
 ---DEPENDENCE---
  - pythonping
  - pysnmp
- - python-ubus
+ - ubus (python-ubus пропатченная версии NetPing)
+ - requests
 
 ---USING---
-1) Отредактировать файлы настроек pingconf, snmpconf
+1) Отредактировать файлы настроек pingconf, snmpconf, httpconf
 
    
     config section '<value>' - ID опроса (любое название/id)

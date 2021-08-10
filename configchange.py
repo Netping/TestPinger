@@ -7,10 +7,11 @@ import protocol
 import ubus
 
 # global variables
-conf_files = {'ping': 'pingconf', 'snmp': 'snmpconf'}
+conf_files = {'ping': 'pingconf', 'snmp': 'snmpconf', 'http': 'httpconf'}
 confdata = []
 pingthreads = []
 snmpthreads = []
+httpthreads = []
 
 class ReParseConfig(threading.Thread):
     def __init__(self):
@@ -19,12 +20,12 @@ class ReParseConfig(threading.Thread):
     def reparseconfig(self, event, data):
         global pingthreads
         global snmpthreads
+        global httpthreads
         global confdata
-        print('EVENT-EVENT')
-        print(event, data)  # just print event name and data to stdout
         testpinger.parseconfig(data['config'], False)
         temppingthreads = []
         tempsnmpthreads = []
+        temphttpthreads = []
         if data['config'][:4] == 'ping':
             # search changed and removed polls in pingconf
             for thread in pingthreads:
@@ -85,6 +86,34 @@ class ReParseConfig(threading.Thread):
                                                      poll['period'], poll['community'], poll['timeout'])
                     snmpthread.start()
                     snmpthreads.append({poll['.name']: snmpthread})
+        if data['config'][:4] == 'snmp':
+            # search changed and removed polls in snmpconfig
+            for thread in httpthreads:
+                thind = httpthreads.index(thread)
+                thkey = list(thread.keys())[0]
+                thval = list(thread.values())[0]
+                th = next((item for item in confdata if item[".name"] == thkey), False)
+                if not th:
+                    httpthreads[thind][thkey].stop()
+                    httpthreads.pop(thind)
+                else:
+                    equal = thval.checkthread(th['pollURL'], th['period'], th['timeout'])
+                    if equal:
+                        continue
+                    else:
+                        httpthreads[thind][thkey].stop()
+                        httpthreads.pop(thind)
+                        httpthread = protocol.HttpThread(th['.name'], th['pollURL'], th['period'], th['timeout'])
+                        httpthread.start()
+                        temphttpthreads.append({th['.name']: httpthread})
+            httpthreads += temphttpthreads
+            # search new polls
+            for poll in confdata:
+                notnewpoll = next((item for item in httpthreads if poll['.name'] in item.keys()), False)
+                if not notnewpoll:
+                    httpthread = protocol.HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'])
+                    httpthread.start()
+                    httpthreads.append({poll['.name']: httpthread})
 
     def run(self):
         # ubus.connect()

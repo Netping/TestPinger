@@ -1,3 +1,4 @@
 pythonping
 pysnmp
-python-ubus
+ubus
+requests
