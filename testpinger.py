@@ -26,7 +26,7 @@ def parseconfig(file, start):
 
 def main():
     try:
-        print('TestPinger (version 0.4)')
+        print('TESTPINGER 5.2')
         print('PRESS "CTRL + C" TO QUIT')
         # create and initialize log file
         logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(message)s')
@@ -52,7 +52,7 @@ def main():
                 snmpthread.start()
                 snmpthreads.append({poll['.name']: snmpthread})
             elif poll['protocol'] == 'http':
-                httpthread = HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'])
+                httpthread = HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'], poll['authuser'], poll['authpwd'])
                 httpthread.start()
                 httpthreads.append({poll['.name']: httpthread})
             else:

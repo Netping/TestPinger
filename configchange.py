@@ -97,13 +97,13 @@ class ReParseConfig(threading.Thread):
                     httpthreads[thind][thkey].stop()
                     httpthreads.pop(thind)
                 else:
-                    equal = thval.checkthread(th['pollURL'], th['period'], th['timeout'])
+                    equal = thval.checkthread(th['pollURL'], th['period'], th['timeout'], th['authuser'], th['authpwd'])
                     if equal:
                         continue
                     else:
                         httpthreads[thind][thkey].stop()
                         httpthreads.pop(thind)
-                        httpthread = protocol.HttpThread(th['.name'], th['pollURL'], th['period'], th['timeout'])
+                        httpthread = protocol.HttpThread(th['.name'], th['pollURL'], th['period'], th['timeout'], th['authuser'], th['authpwd'])
                         httpthread.start()
                         temphttpthreads.append({th['.name']: httpthread})
             httpthreads += temphttpthreads
@@ -111,7 +111,7 @@ class ReParseConfig(threading.Thread):
             for poll in confdata:
                 notnewpoll = next((item for item in httpthreads if poll['.name'] in item.keys()), False)
                 if not notnewpoll:
-                    httpthread = protocol.HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'])
+                    httpthread = protocol.HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'], th['authuser'], th['authpwd'])
                     httpthread.start()
                     httpthreads.append({poll['.name']: httpthread})
 

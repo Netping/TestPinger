@@ -1,11 +1,10 @@
+config section 'ping1'
+    option pollURL 'dev-sn494274236.tst.netping.tw'
+    option period '0.1'
+    option size '70'
 
-config section 'ping11'
-	option pollURL 'localhost'
-	option period '10'
-	option size '70'
-
-config section 'ping33'
-	option pollURL 'localhost'
-	option period '10'
-	option size '30'
+config section 'ping2'
+    option pollURL 'dev-sn500205696.tst.netping.tw'
+    option period '3'
+    option size '30'
 

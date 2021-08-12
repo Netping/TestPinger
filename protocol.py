@@ -31,13 +31,13 @@ class PingThread(threading.Thread):
         while not self._stoped:
             num += 1
             logging.info(
-                '%s START %s num=%s (url=%s, period=%s, size=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                '%s START %s num=%s (url=%s, period=%s, size=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                      self.ID, num, self.url, self.period,
                                                                      self.size))
             try:
                 response_list = ping(self.url, size=self.size, count=1)
                 logging.info(
-                    '%s  STOP %s num=%s (url=%s, period=%s, size=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                    '%s  STOP %s num=%s (url=%s, period=%s, size=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                                    self.ID, num, self.url, self.period,
                                                                                    self.size, response_list._responses))
                 time.sleep(self.period)
@@ -75,7 +75,7 @@ class SNMPThread(threading.Thread):
         while not self._stoped:
             num += 1
             logging.info(
-                '%s START %s num=%s (url=%s, period=%s, OID=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                '%s START %s num=%s (url=%s, period=%s, OID=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                      self.ID, num, self.url, self.period,
                                                                      self.OID, self.timeout))
             try:
@@ -107,7 +107,7 @@ class SNMPThread(threading.Thread):
                     for varBind in varBinds:
                         result += str(varBind)
                     logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                                                   self.ID, num, self.url,
                                                                                                   self.period, self.OID,
                                                                                                   self.timeout, result))
@@ -122,19 +122,21 @@ class SNMPThread(threading.Thread):
                 break
 
 class HttpThread(threading.Thread):
-    def __init__(self, pollID, pollURL, period, timeout):
+    def __init__(self, pollID, pollURL, period, timeout, authuser, authpwd):
         threading.Thread.__init__(self)
         self.ID = pollID
         self.url = pollURL
         self.period = float(period)
         self.timeout = float(timeout)
+        self.authuser = authuser
+        self.authpwd = authpwd
         self._stoped = False
 
     def stop(self):
         self._stoped = True
 
-    def checkthread(self, pollURL, period, timeout):
-        if pollURL == self.url and float(period) == self.period and float(timeout) == self.timeout:
+    def checkthread(self, pollURL, period, timeout, authuser, authpwd):
+        if pollURL == self.url and float(period) == self.period and float(timeout) == self.timeout and authuser == self.authuser and authpwd == self.authpwd:
             return True
         else:
             return False
@@ -144,21 +146,23 @@ class HttpThread(threading.Thread):
         while not self._stoped:
             num += 1
             logging.info(
-                '%s START %s num=%s (url=%s, period=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                '%s START %s num=%s (url=%s, period=%s, timeout=%s)' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                      self.ID, num, self.url, self.period,
                                                                      self.timeout))
             try:
-                response = requests.get(self.url, timeout=self.timeout)
+                response = requests.get(self.url, auth=(self.authuser, self.authpwd), timeout=self.timeout)
+                result = '(' + str(response.status_code) + ') ' + (response.text if response.status_code == 200 else 'empty')
                 logging.info(
-                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                    '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                                    self.ID, num, self.url, self.period,
-                                                                                   self.timeout, response.status_code))
+                                                                                   self.timeout, result))
                 time.sleep(self.period)
             except requests.exceptions.ConnectTimeout:
                 logging.info(
                     '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                                                                                    self.ID, num, self.url, self.period,
                                                                                    self.timeout, 'Connection timeout'))
+                time.sleep(self.period)
             except requests.exceptions.ConnectionError:
                 logging.info(
                     '%s  STOP %s num=%s (url=%s, period=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
