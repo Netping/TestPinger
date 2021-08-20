@@ -86,8 +86,8 @@ class ReParseConfig(threading.Thread):
                                                      poll['period'], poll['community'], poll['timeout'])
                     snmpthread.start()
                     snmpthreads.append({poll['.name']: snmpthread})
-        if data['config'][:4] == 'snmp':
-            # search changed and removed polls in snmpconfig
+        if data['config'][:4] == 'http':
+            # search changed and removed polls in httpconfig
             for thread in httpthreads:
                 thind = httpthreads.index(thread)
                 thkey = list(thread.keys())[0]
@@ -111,7 +111,7 @@ class ReParseConfig(threading.Thread):
             for poll in confdata:
                 notnewpoll = next((item for item in httpthreads if poll['.name'] in item.keys()), False)
                 if not notnewpoll:
-                    httpthread = protocol.HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'], th['authuser'], th['authpwd'])
+                    httpthread = protocol.HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'], poll['authuser'], poll['authpwd'])
                     httpthread.start()
                     httpthreads.append({poll['.name']: httpthread})
 
