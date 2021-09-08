@@ -4,7 +4,8 @@ import threading
 from datetime import datetime
 import time
 from pythonping import ping
-from pysnmp.entity.rfc3413.oneliner import cmdgen
+from puresnmp import get
+
 import requests
 from testpinger import *
 
@@ -79,34 +80,8 @@ class SNMPThread(threading.Thread):
                                                                      self.ID, num, self.url, self.period,
                                                                      self.OID, self.timeout))
             try:
-                snmpget = cmdgen.CommandGenerator()
-                errorIndication, errorStatus, errorIndex, varBinds = snmpget.getCmd(
-                    cmdgen.CommunityData(self.community, mpModel=0),
-                    cmdgen.UdpTransportTarget((self.url[0], int(self.url[1])), timeout=self.timeout, retries=0),
-                    self.OID
-                )
-                if errorIndication:
-                    # print("STOP {0} WITH ERROR: {1}".format(self.ID, errorIndication))
-                    logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (
-                        datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                        self.ID, num, self.url, self.period,
-                        self.OID, self.timeout, errorIndication))
-                    # break
-                elif errorStatus:
-                    # print("STOP {0} with {1} at {2}".format(self.ID, errorStatus.prettyPrint(),
-                    #                                         errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
-                    logging.info(
-                        '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (
-                            datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
-                            self.ID, num, self.url, self.period,
-                            self.OID, self.timeout, errorIndex and varBinds[int(errorIndex) - 1][0] or '?'))
-                    # break
-                else:
-                    result = ''
-                    for varBind in varBinds:
-                        result += str(varBind)
-                    logging.info(
+                result = get(self.url[0], self.community, self.OID, port=int(self.url[1]), timeout=self.timeout)
+                logging.info(
                         '%s  STOP %s num=%s (url=%s, period=%s, OID=%s, timeout=%s) result=%s' % (datetime.now().strftime('%d.%m.%Y %H:%M:%S.%f')[:-3],
                                                                                                   self.ID, num, self.url,
                                                                                                   self.period, self.OID,

@@ -26,7 +26,7 @@ def parseconfig(file, start):
 
 def main():
     try:
-        print('TESTPINGER 5.2')
+        print('TESTPINGER 5.3')
         print('PRESS "CTRL + C" TO QUIT')
         # create and initialize log file
         logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(message)s')
@@ -55,8 +55,6 @@ def main():
                 httpthread = HttpThread(poll['.name'], poll['pollURL'], poll['period'], poll['timeout'], poll['authuser'], poll['authpwd'])
                 httpthread.start()
                 httpthreads.append({poll['.name']: httpthread})
-            else:
-                pass
         reparseconfig = ReParseConfig()
         reparseconfig.daemon = True
         reparseconfig.start()

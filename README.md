@@ -4,7 +4,7 @@
 
 ---DEPENDENCE---
  - pythonping
- - pysnmp
+ - puresnmp
  - ubus (python-ubus пропатченная версии NetPing)
  - requests
 

@@ -1,4 +1,4 @@
 pythonping
-pysnmp
+puresnmp
 ubus
 requests
